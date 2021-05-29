@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:you_search/src/bloc/connectivity_bloc/connectivity_bloc.dart';
 import 'package:you_search/src/data/data_model.dart';
 import 'package:you_search/src/network/youtube_error.dart';
 import 'package:you_search/src/repository/youtube_search_repo.dart';
@@ -12,8 +13,9 @@ part 'youtube_search_state.dart';
 class YoutubeSearchBloc extends Bloc<YoutubeSearchEvent, YoutubeSearchState> {
   final YoutubeSearchRepo _youtubeSearchRepo;
   YoutubeSearchState _searchState = YoutubeSearchInitial(false);
-  YoutubeSearchBloc(this._youtubeSearchRepo)
-      : super(YoutubeSearchInitial(false));
+  YoutubeSearchBloc(
+    this._youtubeSearchRepo,
+  ) : super(YoutubeSearchInitial(false));
 
   @override
   Stream<YoutubeSearchState> mapEventToState(

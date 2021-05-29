@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:kiwi/kiwi.dart' as kiwi;
+import 'package:you_search/src/bloc/connectivity_bloc/connectivity_bloc.dart';
 import 'package:you_search/src/bloc/search_bloc/youtube_search_bloc.dart';
 import 'package:you_search/src/data/data_model.dart';
 import 'package:you_search/src/ui/details/detail_page.dart';
+import 'package:you_search/src/ui/disConnected_page.dart';
 import 'package:you_search/src/ui/widgets/centered_message.dart';
 import 'package:you_search/src/ui/widgets/search_bar.dart';
 // import 'package:you_search/src/bloc/youtube_search_event.dart';
@@ -15,11 +17,19 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   final _searchBloc = kiwi.KiwiContainer().resolve<YoutubeSearchBloc>();
+  final _connBloc = kiwi.KiwiContainer().resolve<ConnectivityBloc>();
   final _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    _connBloc.add(CheckConnectivity());
+    super.initState();
+  }
 
   @override
   void dispose() {
     _searchBloc.close();
+    _connBloc.close();
     super.dispose();
   }
 
@@ -33,34 +43,47 @@ class _SearchPageState extends State<SearchPage> {
 
   Scaffold _buildScaffold() {
     return Scaffold(
-      appBar: AppBar(
-        title: SearchBar(),
-      ),
-      body: BlocBuilder<YoutubeSearchBloc, YoutubeSearchState>(
-        // bloc: _searchBloc,
-        builder: (context, YoutubeSearchState state) {
-          if (state is YoutubeSearchInitial) {
-            return CenteredMesaage(
-              message: 'Start Searching',
-              iconData: Icons.ondemand_video,
-            );
-          } else if (state is YoutubeSearchLoading) {
-            return Center(
-              child: CircularProgressIndicator(),
-            );
-          } else if (state is YoutubeSearchSuccess) {
-            // print('sucess');
-            return _buildResultList(state);
-          } else if (state is YoutubeSearchFailure) {
-            return CenteredMesaage(
-              message: '${state.error}',
-              iconData: Icons.error_outline,
-            );
-          }
-          return Text('hello');
-        },
-      ),
-    );
+        appBar: AppBar(
+          title: SearchBar(),
+        ),
+        body: BlocBuilder<ConnectivityBloc, ConnectivityState>(
+          builder: (context, state) {
+            print(state);
+            // return Text('hello');
+            if (state is ConnectivityInitial) {
+              return Center(
+                child: CircularProgressIndicator(),
+              );
+            } else if (state is ConnectivityConnected) {
+              return BlocBuilder<YoutubeSearchBloc, YoutubeSearchState>(
+                // bloc: _searchBloc,
+                builder: (context, YoutubeSearchState state) {
+                  if (state is YoutubeSearchInitial) {
+                    return CenteredMesaage(
+                      message: 'Start Searching',
+                      iconData: Icons.ondemand_video,
+                    );
+                  } else if (state is YoutubeSearchLoading) {
+                    return Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  } else if (state is YoutubeSearchSuccess) {
+                    // print('sucess');
+                    return _buildResultList(state);
+                  } else if (state is YoutubeSearchFailure) {
+                    return CenteredMesaage(
+                      message: '${state.error}',
+                      iconData: Icons.error_outline,
+                    );
+                  }
+                  return Text('hello');
+                },
+              );
+            } else if (state is ConnectivityDisconnected) {
+              return DisConnectedPage();
+            }
+          },
+        ));
   }
 
   Widget _buildResultList(YoutubeSearchSuccess state) {
