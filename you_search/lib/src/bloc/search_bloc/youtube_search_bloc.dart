@@ -33,17 +33,20 @@ class YoutubeSearchBloc extends Bloc<YoutubeSearchEvent, YoutubeSearchState> {
       yield YoutubeSearchInitial(false);
       _searchState = YoutubeSearchInitial(false);
     } else {
+      // print("hello");
       yield YoutubeSearchLoading(false);
       _searchState = YoutubeSearchLoading(false);
       try {
         final searchResult = await _youtubeSearchRepo.searchVideos(event.query);
-
+        // print('harsh');
         yield YoutubeSearchSuccess(searchResult, false);
         _searchState = YoutubeSearchSuccess(searchResult, false);
       } on YoutubeError catch (e) {
+        // print('error1');
         yield YoutubeSearchFailure(e.message, false);
         _searchState = YoutubeSearchFailure(e.message, false);
       } on NoSearchResultsException catch (e) {
+        // print('error2');
         yield YoutubeSearchFailure(e.message, false);
         _searchState = YoutubeSearchFailure(e.message, false);
       }

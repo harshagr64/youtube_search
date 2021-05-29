@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:kiwi/kiwi.dart' as kiwi;
-import 'package:you_search/injection.dart';
-import 'package:you_search/src/bloc/youtube_search_bloc.dart';
+import 'package:you_search/src/bloc/search_bloc/youtube_search_bloc.dart';
+import 'package:you_search/src/data/data_model.dart';
+import 'package:you_search/src/ui/details/detail_page.dart';
+import 'package:you_search/src/ui/widgets/centered_message.dart';
+import 'package:you_search/src/ui/widgets/search_bar.dart';
+// import 'package:you_search/src/bloc/youtube_search_event.dart';
 
 class SearchPage extends StatefulWidget {
   @override
@@ -11,6 +15,7 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   final _searchBloc = kiwi.KiwiContainer().resolve<YoutubeSearchBloc>();
+  final _scrollController = ScrollController();
 
   @override
   void dispose() {
@@ -31,77 +36,121 @@ class _SearchPageState extends State<SearchPage> {
       appBar: AppBar(
         title: SearchBar(),
       ),
+      body: BlocBuilder<YoutubeSearchBloc, YoutubeSearchState>(
+        // bloc: _searchBloc,
+        builder: (context, YoutubeSearchState state) {
+          if (state is YoutubeSearchInitial) {
+            return CenteredMesaage(
+              message: 'Start Searching',
+              iconData: Icons.ondemand_video,
+            );
+          } else if (state is YoutubeSearchLoading) {
+            return Center(
+              child: CircularProgressIndicator(),
+            );
+          } else if (state is YoutubeSearchSuccess) {
+            // print('sucess');
+            return _buildResultList(state);
+          } else if (state is YoutubeSearchFailure) {
+            return CenteredMesaage(
+              message: '${state.error}',
+              iconData: Icons.error_outline,
+            );
+          }
+          return Text('hello');
+        },
+      ),
     );
   }
-}
 
-class SearchBar extends StatelessWidget {
-  const SearchBar({
-    Key key,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 45,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(5),
-      ),
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 10),
-        child: SearchField(),
+  Widget _buildResultList(YoutubeSearchSuccess state) {
+    return NotificationListener<ScrollNotification>(
+      onNotification: _handleScrollNotification,
+      child: ListView.builder(
+        controller: _scrollController,
+        itemCount: _calculatListItemCount(state),
+        itemBuilder: (context, index) {
+          // print('true');
+          return index >= state.searchResult.length
+              ? _loadingItems()
+              : _buildVideoListItemCard(
+                  state.searchResult[index].snippet,
+                  state.searchResult[index].id,
+                );
+        },
       ),
     );
   }
-}
 
-class SearchField extends StatefulWidget {
-  const SearchField({
-    Key key,
-  }) : super(key: key);
-
-  @override
-  _SearchFieldState createState() => _SearchFieldState();
-}
-
-class _SearchFieldState extends State<SearchField> {
-  final _controller = TextEditingController();
-  final _focusNode = FocusNode();
-
-  @override
-  void initState() {
-    _focusNode.addListener(() {
-      if (_focusNode.hasFocus) {
-        _controller.selection = TextSelection(
-          baseOffset: 0,
-          extentOffset: _controller.text.length,
-        );
-      }
-    });
-
-    super.initState();
+  int _calculatListItemCount(YoutubeSearchSuccess state) {
+    // print('item count');
+    print('${state.searchResult.length}');
+    if (state.hasReachedEndofResults) {
+      // print('hers1');
+      return state.searchResult.length;
+    } else {
+      // print('hers');
+      return state.searchResult.length + 1;
+    }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: _controller,
-      focusNode: _focusNode,
-      decoration: InputDecoration(
-        hintText: 'Search Videos',
-        border: InputBorder.none,
-        icon: Icon(
-          Icons.search,
-          color: Colors.black.withOpacity(0.5),
+  Widget _loadingItems() {
+    return Center(
+      child: CircularProgressIndicator(),
+    );
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollEndNotification &&
+        _scrollController.position.extentAfter == 0)
+      _searchBloc.add(FetchNextSerachData());
+    return false;
+  }
+
+  Widget _buildVideoListItemCard(Snippet searchResult, Id id) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) {
+          return DetailPage(videoId: id.videoId);
+        }));
+      },
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            children: [
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Image.network(
+                  searchResult.thumbnails.high.url,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              SizedBox(
+                height: 5,
+              ),
+              Text(
+                '${searchResult.title}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(
+                height: 5,
+              ),
+              Text(
+                '${searchResult.description}',
+                style: TextStyle(
+                  color: Colors.black45,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      onSubmitted: (searchQuery) {
-        //TODO: implement searching for channel when user click on submit
-        print("$searchQuery");
-        // BlocProvider.of<YoutubeSearchBloc>(context).add();
-      },
     );
   }
 }

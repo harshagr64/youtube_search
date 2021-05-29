@@ -1,3 +1,4 @@
+import 'package:you_search/src/data/video_data_model.dart' as vdata;
 import 'package:you_search/src/data/data_model.dart';
 import 'package:you_search/src/network/youtube_data_source.dart';
 
@@ -44,10 +45,22 @@ class YoutubeSearchRepo {
 
     return nextSearchResult.items;
   }
+
+  Future<List<vdata.Item>> searchSingleVideo(String id) async {
+    final result = await _youtubeSearchData.fetchVideoInfo(id);
+    if (result.items.isEmpty) {
+      throw NoSuchVideoException();
+    }
+    return result.items;
+  }
 }
 
 class NoNextPageTokenException implements Exception {
   // final message = '';
+}
+
+class NoSuchVideoException implements Exception {
+  final message = 'No Such Video';
 }
 
 class SearchNonInitiatedException implements Exception {
